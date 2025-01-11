@@ -13,8 +13,7 @@ app.use(express.json())
 
 // 
 
-
-const uri = `mongodb+srv://${process.env.DB_USER_NAME}:${process.env.DB_USERP_ASS}@cluster0.yibuo.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const uri = `mongodb+srv://${process.env.DB_USER_NAME}:${process.env.DB_USERP_ASS}@cluster0.7ewvs.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -30,11 +29,44 @@ async function run() {
     
     await client.connect()
 
-    // use post request
+
+
+
+    // Database 
+
+    const productsCollection = client.db('product').collection('products')
+
+   
+
+
+   
 
 
     // get req 
 
+    app.get('/products',async  (req , res)=>{
+
+      const products = await productsCollection.find().toArray();
+      res.send(products);
+
+
+  
+    })
+
+    // implement cart 
+
+    app.post('/cart', async (req,res)=>{
+      // get item form boyd 
+
+      const item = req.body;
+
+      const result = await productsCollection.insertOne(item);
+      res.send(result);
+
+
+
+    })
+    // get 
 
 
     // implement stripe
@@ -61,6 +93,6 @@ app.get('/',(req,res)=>{
 
 // run
 
-app.listen(()=> console.log(`server running on ${port}`))
+app.listen(port,()=> console.log(`server running on ${port}`))
 
 
