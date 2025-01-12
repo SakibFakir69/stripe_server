@@ -7,7 +7,9 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 const stripe = require('stripe')(process.env.Stripe_secrect_key);
-
+const jwt = require('jsonwebtoken');
+/// sign in , sign out , verfiy token
+// set token local storage , axiossecure
 app.use(cors());
 app.use(express.json())
 
@@ -38,6 +40,62 @@ async function run() {
     const productsCollection = client.db('product').collection('products');
     const cartCollection = client.db('cart').collection("carts");
     const paymentsCollection = client.db('cart').collection("payments");
+    const usersCollection = client.db('cart').collection("users");
+
+
+
+    // jwt sign and logout 
+
+    // settoken on local stroage 
+
+    app.post('/signin' ,async  (req,res)=>{
+
+      const user = req.body;
+      console.log(user);
+
+      const token = jwt.sign(user, process.env.secrect_key, {expiresIn:'6h'})
+      console.log("token is", token);
+
+      res.send({token});
+
+    })
+
+    app.get('/logout' , (req,res)=>{
+      // empty
+
+
+
+    })
+
+    // verfiy path 
+
+    const verifiyPath = (req, res, next)=>{
+      console.log('headers ' ,req.headers);
+
+      const token = req.headers.authorization?.split(' ')[1];
+
+      console.log("this token inside pathverify",token)
+
+      if(!token)
+      {
+        return res.status(401).send({message : 'access denied token'})
+
+      }
+      jwt.verify(token, process.env.secrect_key,(error, decode)=>{
+        if(error)
+        {
+          return res.status(403).send({message : 'indvalid expire token'})
+        }
+        req.user=decode;
+      })
+      
+
+
+
+      next();
+    }
+
+    
 
 
 
@@ -60,7 +118,7 @@ async function run() {
 
     // implement cart 
 
-    app.post('/cart', async (req,res)=>{
+    app.post('/cart', verifiyPath,  async (req,res)=>{
       // get item form boyd 
 
       const item = req.body;
@@ -73,8 +131,33 @@ async function run() {
     })
     // get cart 
 
-    app.get('/carts', async (req,res)=>{
+    app.get('/carts', verifiyPath, async (req,res)=>{
       const result = await cartCollection.find().toArray();
+      res.send(result);
+    })
+
+    // user store in database
+
+    app.post('/users', async (req,res)=>{
+      const users = req.body;
+      // get all user from body ;
+      // now need user inser to make a collection 
+
+      const result = await usersCollection.insertOne(users);
+
+      // if 
+
+
+
+
+      res.send(result);
+
+    })
+
+    // now find user 
+    // this for admin
+    app.get('/users', async (req,res)=>{
+      const result = await usersCollection.find().toArray();
       res.send(result);
     })
 
@@ -87,7 +170,7 @@ async function run() {
 
       const {price} = req.body;
       const amount = parseInt(price*100);
-      console.log(amount,'inside ammount')
+    
 
       const paymentIntent= await stripe.paymentIntents.create({
         amount : amount,
